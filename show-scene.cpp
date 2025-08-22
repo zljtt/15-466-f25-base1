@@ -1,44 +1,21 @@
-//Mode.hpp declares the "Mode::current" static member variable, which is used to decide where event-handling, updating, and drawing events go:
 #include "Mode.hpp"
-
-//The 'PlayMode' mode plays the game:
-#include "PlayMode.hpp"
-
-//For asset loading:
+#include "ShowSceneMode.hpp"
 #include "Load.hpp"
-
-//GL.hpp will include a non-namespace-polluting set of opengl prototypes:
 #include "GL.hpp"
-
-//for screenshots:
 #include "load_save_png.hpp"
+#include "ShowSceneProgram.hpp"
 
-//Includes for libSDL:
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-//...and for c++ standard library functions:
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <memory>
 #include <algorithm>
 
-#ifdef _WIN32
-extern "C" { uint32_t GetACP(); }
-#endif
 int main(int argc, char **argv) {
 #ifdef _WIN32
-	{ //when compiled on windows, check that code page is forced to utf-8 (makes file loading/saving work right):
-		//see: https://docs.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page
-		uint32_t code_page = GetACP();
-		if (code_page == 65001) {
-			std::cout << "Code page is properly set to UTF-8." << std::endl;
-		} else {
-			std::cout << "WARNING: code page is set to " << code_page << " instead of 65001 (UTF-8). Some file handling functions may fail." << std::endl;
-		}
-	}
-
 	//when compiled on windows, unhandled exceptions don't have their message printed, which can make debugging simple issues difficult.
 	try {
 #endif
@@ -64,15 +41,15 @@ int main(int argc, char **argv) {
 
 	//create window:
 	Mode::window = SDL_CreateWindow(
-		"gp25 game1: remember to change your title", //TODO: remember to set a title for your game!
-		2*PPU466::ScreenWidth + 8, 2*PPU466::ScreenHeight + 8, //TODO: modify window size if you'd like
+		"scene viewer",
+		800, 800,
 		SDL_WINDOW_OPENGL
 		| SDL_WINDOW_RESIZABLE //uncomment to allow resizing
 		| SDL_WINDOW_HIGH_PIXEL_DENSITY //uncomment for full resolution on high-DPI screens
 	);
 
 	//prevent exceedingly tiny windows when resizing:
-	SDL_SetWindowMinimumSize(Mode::window, PPU466::ScreenWidth, PPU466::ScreenHeight);
+	SDL_SetWindowMinimumSize(Mode::window, 100, 100);
 
 	if (!Mode::window) {
 		std::cerr << "Error creating SDL window: " << SDL_GetError() << std::endl;
@@ -92,21 +69,79 @@ int main(int argc, char **argv) {
 	init_GL();
 
 	//Set VSYNC + Late Swap (prevents crazy FPS):
-	if (!SDL_GL_SetSwapInterval(-1)) {
+	if (SDL_GL_SetSwapInterval(-1) != 0) {
 		std::cerr << "NOTE: couldn't set vsync + late swap tearing (" << SDL_GetError() << ")." << std::endl;
-		if (!SDL_GL_SetSwapInterval(1)) {
+		if (SDL_GL_SetSwapInterval(1) != 0) {
 			std::cerr << "NOTE: couldn't set vsync (" << SDL_GetError() << ")." << std::endl;
 		}
 	}
 
-	//Hide mouse cursor (note: showing can be useful for debugging):
-	//SDL_ShowCursor(SDL_DISABLE);
-
-	//------------ load assets --------------
+	//------------ load resources --------------
 	call_load_functions();
 
 	//------------ create game mode + make current --------------
-	Mode::set_current(std::make_shared< PlayMode >());
+	bool usage = false;
+	std::string scene_file;
+	std::string meshes_file;
+	if (argc == 2) {
+		scene_file = argv[1];
+	} else if (argc == 3) {
+		scene_file = argv[1];
+		meshes_file = argv[2];
+	} else {
+		usage = true;
+	}
+	MeshBuffer *buffer = nullptr;
+	GLuint buffer_vao = 0;
+	if (meshes_file != "") {
+		try {
+			buffer = new MeshBuffer(meshes_file);
+			buffer_vao = buffer->make_vao_for_program(show_scene_program->program);
+		} catch (std::exception &e) {
+			std::cerr << "ERROR loading mesh buffer '" << meshes_file << "': " << e.what() << std::endl;
+			usage = true;
+			buffer = nullptr;
+		}
+	}
+	Scene *scene = nullptr;
+	if (scene_file != "") {
+		try {
+			scene = new Scene();
+			scene->load(scene_file, [&buffer,&buffer_vao](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+				if (!buffer_vao) return;
+				Mesh const &mesh = buffer->lookup(mesh_name);
+
+				scene.drawables.emplace_back(transform);
+				Scene::Drawable &drawable = scene.drawables.back();
+
+				drawable.pipeline = show_scene_program_pipeline;
+
+				drawable.pipeline.vao = buffer_vao;
+				drawable.pipeline.type = mesh.type;
+				drawable.pipeline.start = mesh.start;
+				drawable.pipeline.count = mesh.count;
+
+			});
+		} catch (std::exception &e) {
+			std::cerr << "ERROR loading scene '" << scene_file << "': " << e.what() << std::endl;
+			usage = true;
+			scene = nullptr;
+		}
+	}
+	if (!scene) {
+		usage = true;
+	}
+	if (usage) {
+		std::cerr << "Usage:\n\t" << argv[0] << " <path/to/scene.scene> [path/to/meshes.pnct]" << std::endl;
+		return 1;
+	}
+	std::cout << "Showing scene from '" << scene_file << "' with";
+	if (meshes_file != "") {
+		std::cout << " meshes from '" << meshes_file << "'" << std::endl;
+	} else {
+		std::cout << " no meshes -- consider passing a '.pnct' file as the second argument." << std::endl;
+	}
+	Mode::set_current(std::make_shared< ShowSceneMode >(*scene));
 
 	//------------ main loop ------------
 
@@ -132,7 +167,7 @@ int main(int argc, char **argv) {
 
 		{ //(1) process any events that are pending
 			static SDL_Event evt;
-			while (SDL_PollEvent(&evt)) {
+			while (SDL_PollEvent(&evt) == 1) {
 				//handle resizing:
 				if (evt.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
 					on_resize();
@@ -187,7 +222,6 @@ int main(int argc, char **argv) {
 
 
 	//------------  teardown ------------
-
 	SDL_GL_DestroyContext(context);
 	context = 0;
 

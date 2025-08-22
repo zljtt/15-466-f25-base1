@@ -1,44 +1,20 @@
-//Mode.hpp declares the "Mode::current" static member variable, which is used to decide where event-handling, updating, and drawing events go:
 #include "Mode.hpp"
-
-//The 'PlayMode' mode plays the game:
-#include "PlayMode.hpp"
-
-//For asset loading:
+#include "ShowMeshesMode.hpp"
 #include "Load.hpp"
-
-//GL.hpp will include a non-namespace-polluting set of opengl prototypes:
 #include "GL.hpp"
-
-//for screenshots:
 #include "load_save_png.hpp"
 
-//Includes for libSDL:
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-//...and for c++ standard library functions:
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <memory>
 #include <algorithm>
 
-#ifdef _WIN32
-extern "C" { uint32_t GetACP(); }
-#endif
 int main(int argc, char **argv) {
 #ifdef _WIN32
-	{ //when compiled on windows, check that code page is forced to utf-8 (makes file loading/saving work right):
-		//see: https://docs.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page
-		uint32_t code_page = GetACP();
-		if (code_page == 65001) {
-			std::cout << "Code page is properly set to UTF-8." << std::endl;
-		} else {
-			std::cout << "WARNING: code page is set to " << code_page << " instead of 65001 (UTF-8). Some file handling functions may fail." << std::endl;
-		}
-	}
-
 	//when compiled on windows, unhandled exceptions don't have their message printed, which can make debugging simple issues difficult.
 	try {
 #endif
@@ -64,15 +40,15 @@ int main(int argc, char **argv) {
 
 	//create window:
 	Mode::window = SDL_CreateWindow(
-		"gp25 game1: remember to change your title", //TODO: remember to set a title for your game!
-		2*PPU466::ScreenWidth + 8, 2*PPU466::ScreenHeight + 8, //TODO: modify window size if you'd like
+		"pnct viewer",
+		800, 800,
 		SDL_WINDOW_OPENGL
 		| SDL_WINDOW_RESIZABLE //uncomment to allow resizing
 		| SDL_WINDOW_HIGH_PIXEL_DENSITY //uncomment for full resolution on high-DPI screens
 	);
 
 	//prevent exceedingly tiny windows when resizing:
-	SDL_SetWindowMinimumSize(Mode::window, PPU466::ScreenWidth, PPU466::ScreenHeight);
+	SDL_SetWindowMinimumSize(Mode::window, 100, 100);
 
 	if (!Mode::window) {
 		std::cerr << "Error creating SDL window: " << SDL_GetError() << std::endl;
@@ -99,14 +75,31 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	//Hide mouse cursor (note: showing can be useful for debugging):
-	//SDL_ShowCursor(SDL_DISABLE);
-
-	//------------ load assets --------------
+	//------------ load resources --------------
 	call_load_functions();
 
 	//------------ create game mode + make current --------------
-	Mode::set_current(std::make_shared< PlayMode >());
+	bool usage = false;
+	MeshBuffer *buffer = nullptr;
+	if (argc == 2) {
+		try {
+			buffer = new MeshBuffer(argv[1]);
+		} catch (std::exception &e) {
+			std::cerr << "ERROR: " << e.what() << std::endl;
+			usage = true;
+			buffer = nullptr;
+		}
+	}
+	if (buffer) {
+		Mode::set_current(std::make_shared< ShowMeshesMode >(*buffer));
+	}
+	if (!Mode::current) {
+		usage = true;
+	}
+	if (usage) {
+		std::cerr << "Usage:\n\t" << argv[0] << " [path/to/meshes.pnct]" << std::endl;
+		return 1;
+	}
 
 	//------------ main loop ------------
 
@@ -187,7 +180,6 @@ int main(int argc, char **argv) {
 
 
 	//------------  teardown ------------
-
 	SDL_GL_DestroyContext(context);
 	context = 0;
 
