@@ -255,8 +255,8 @@ void PPU466::draw(glm::uvec2 const &drawable_size) const {
 	{ //set matrix to transform [0,ScreenWidth]x[0,ScreenHeight] -> [-1,1]x[-1,1]:
 		//NOTE: glm uses column-major matrices:
 		glm::mat4 OBJECT_TO_CLIP = glm::mat4(
-			glm::vec4(2.0f / ScreenWidth, 0.0f, 0.0f, 0.0f),
-			glm::vec4(0.0f, 2.0f / ScreenHeight, 0.0f, 0.0f),
+			glm::vec4(2.0f / float(ScreenWidth), 0.0f, 0.0f, 0.0f),
+			glm::vec4(0.0f, 2.0f / float(ScreenHeight), 0.0f, 0.0f),
 			glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
 			glm::vec4(-1.0f,-1.0f, 0.0f, 1.0f)
 		);
