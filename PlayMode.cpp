@@ -25,8 +25,8 @@ Load<Sprites> sprites(LoadTagEarly, []() -> Sprites const *
     // ret.load(data_path("fruits2.png")); // tile 6 - 7
     // ret.load(data_path("characters.png")); // tile 8 - 11
     // ret.load(data_path("nums.png")); // tile 12 - 23
-    ret.load_binary(data_path("game.asset"));
-    // ret.save_assets(data_path("game.asset"));
+    ret.load_binary(data_path("game.assets"));
+    // ret.save_assets(data_path("game.assets"));
     return &ret; });
 
 PlayMode::PlayMode()
