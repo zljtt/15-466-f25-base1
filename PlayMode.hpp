@@ -1,35 +1,63 @@
+#pragma once
 #include "PPU466.hpp"
 #include "Mode.hpp"
+#include "Load.hpp"
+#include "Sprites.hpp"
+#include "Scene.hpp"
 
 #include <glm/glm.hpp>
 
 #include <vector>
 #include <deque>
 
-struct PlayMode : Mode {
-	PlayMode();
-	virtual ~PlayMode();
+struct PlayMode : Mode
+{
+    PlayMode();
+    virtual ~PlayMode();
 
-	//functions called by main loop:
-	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
-	virtual void update(float elapsed) override;
-	virtual void draw(glm::uvec2 const &drawable_size) override;
+    // functions called by main loop:
+    virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
+    virtual void update(float elapsed) override;
+    virtual void draw(glm::uvec2 const &drawable_size) override;
 
-	//----- game state -----
+    //----- game state -----
+    Scene scene;
+    enum Fruit : u_int8_t
+    {
+        CHERRY = 0,     // normal speed, normal acc, low cooldown
+        WATERMELON = 1, // low speed, high acc, high cooldown
+        ORANGE = 2,     // high speed, no acc, normal cooldown
+        BANANA = 3      // normal speed, low acc, normal cooldown
+    };
+    u_int8_t current_fruit = CHERRY;
+    u_int64_t fruit_count = 0;
+    float drop_timer;
+    static const int COUNTDOWN = 60;
+    float timer;
+    int point = 0;
 
-	//input tracking:
-	struct Button {
-		uint8_t downs = 0;
-		uint8_t pressed = 0;
-	} left, right, down, up;
+    std::vector<GameObject> fruits;
 
-	//some weird background animation:
-	float background_fade = 0.0f;
+    void drop_fruit();
+    const GameObject get_first_fruit() const;
+    void switch_fruit_display(int id);
+    void switch_point_display(int point);
+    void switch_time_display(float time);
 
-	//player position:
-	glm::vec2 player_at = glm::vec2(0.0f);
+    GameObject::SpriteInput get_fruit_sprite(int id);
+    GameObject::SpriteInput get_number_sprite(int number, float x_offset, float y_offset);
+    float get_fruit_acceleration(int id) const;
+    float get_fruit_speed(int id) const;
+    float get_fruit_cooldown(int id) const;
+    u_int8_t get_point_from_fruit(int id) const;
 
-	//----- drawing handled by PPU466 -----
+    // input tracking:
+    struct Button
+    {
+        uint8_t downs = 0;
+        uint8_t pressed = 0;
+    } left, right;
 
-	PPU466 ppu;
+    //----- drawing handled by PPU466 -----
+    PPU466 ppu;
 };

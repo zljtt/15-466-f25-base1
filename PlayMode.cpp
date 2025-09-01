@@ -1,211 +1,360 @@
 #include "PlayMode.hpp"
 
-//for the GL_ERRORS() macro:
+// for the GL_ERRORS() macro:
 #include "gl_errors.hpp"
-
-//for glm::value_ptr() :
-#include <glm/gtc/type_ptr.hpp>
-
+#include "data_path.hpp"
+#include "Sprites.hpp"
+#include "Scene.hpp"
 #include <random>
+// for glm::value_ptr() :
+#include <glm/gtc/type_ptr.hpp>
+#include <cstdlib>
+#include <ctime>
 
-PlayMode::PlayMode() {
-	//TODO:
-	// you *must* use an asset pipeline of some sort to generate tiles.
-	// don't hardcode them like this!
-	// or, at least, if you do hardcode them like this,
-	//  make yourself a script that spits out the code that you paste in here
-	//   and check that script into your repository.
+uint8_t background_palette; // 0
+uint8_t fruit1_palette;     // 1
+uint8_t fruit2_palette;     // 2
+uint8_t characters_palette; // 3
+uint8_t nums_palette;       // 4
 
-	//Also, *don't* use these tiles in your game:
+Load<Sprites> sprites(LoadTagEarly, []() -> Sprites const *
+                      {
+    static Sprites ret {};
+    background_palette = ret.load(data_path("background.png")); // tile 0 - 3
+    fruit1_palette = ret.load(data_path("fruits1.png")); // tile 4 - 5
+    fruit2_palette = ret.load(data_path("fruits2.png")); // tile 6 - 7
+    characters_palette = ret.load(data_path("characters.png")); // tile 8 - 11
+    nums_palette = ret.load(data_path("nums.png")); // tile 12 - 23
+    return &ret; });
 
-	{ //use tiles 0-16 as some weird dot pattern thing:
-		std::array< uint8_t, 8*8 > distance;
-		for (uint32_t y = 0; y < 8; ++y) {
-			for (uint32_t x = 0; x < 8; ++x) {
-				float d = glm::length(glm::vec2((x + 0.5f) - 4.0f, (y + 0.5f) - 4.0f));
-				d /= glm::length(glm::vec2(4.0f, 4.0f));
-				distance[x+8*y] = uint8_t(std::max(0,std::min(255,int32_t( 255.0f * d ))));
-			}
-		}
-		for (uint32_t index = 0; index < 16; ++index) {
-			PPU466::Tile tile;
-			uint8_t t = uint8_t((255 * index) / 16);
-			for (uint32_t y = 0; y < 8; ++y) {
-				uint8_t bit0 = 0;
-				uint8_t bit1 = 0;
-				for (uint32_t x = 0; x < 8; ++x) {
-					uint8_t d = distance[x+8*y];
-					if (d > t) {
-						bit0 |= (1 << x);
-					} else {
-						bit1 |= (1 << x);
-					}
-				}
-				tile.bit0[y] = bit0;
-				tile.bit1[y] = bit1;
-			}
-			ppu.tile_table[index] = tile;
-		}
-	}
+PlayMode::PlayMode()
+{
+    timer = COUNTDOWN;
+    ppu.palette_table = sprites->to_ppu466_palette_table();
+    ppu.tile_table = sprites->to_ppu466_tile_table();
 
-	//use sprite 32 as a "player":
-	ppu.tile_table[32].bit0 = {
-		0b01111110,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b01111110,
-	};
-	ppu.tile_table[32].bit1 = {
-		0b00000000,
-		0b00000000,
-		0b00011000,
-		0b00100100,
-		0b00000000,
-		0b00100100,
-		0b00000000,
-		0b00000000,
-	};
+    // player
+    GameObject player{PPU466::ScreenWidth / 2 - 4, PPU466::ScreenHeight - 8, {{4, fruit1_palette, 0, 0, false}, {11, characters_palette, 0, -8, false}}};
+    scene.add_game_object("player", player);
+    // catcher
+    GameObject catcher{PPU466::ScreenWidth / 2 - 4, 0, {{8, characters_palette, -8, 0, false}, {9, characters_palette, 0, 0, false}, {10, characters_palette, 8, 0, false}}};
+    scene.add_game_object("catcher", catcher);
 
-	//makes the outside of tiles 0-16 solid:
-	ppu.palette_table[0] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	};
+    // current point
+    GameObject score{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{12, nums_palette, 0, 0, false}}};
+    scene.add_game_object("score", score);
+    // 14 -> 0, 15 -> 1, 16 -> 2, 17 -> 3, 18 -> 4, 19 -> 5, 20 -> 6, 21 -> 7, 22 -> 8, 23 -> 9
+    // current time
+    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{13, nums_palette, 0, 0, false}}};
+    scene.add_game_object("timer", timer);
 
-	//makes the center of tiles 0-16 solid:
-	ppu.palette_table[1] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	};
-
-	//used for the player:
-	ppu.palette_table[7] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0xff, 0xff, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	};
-
-	//used for the misc other sprites:
-	ppu.palette_table[6] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x88, 0x88, 0xff, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	};
-
+    srand(time(nullptr));
+    for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y)
+    {
+        for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x)
+        {
+            scene.set_background(x, y, rand() % 4, background_palette);
+        }
+    }
+    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, nums_palette);
+    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, nums_palette);
 }
 
-PlayMode::~PlayMode() {
+PlayMode::~PlayMode()
+{
 }
 
-bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
+bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
+{
+    if (timer < 0)
+        return false; // game ends
+    if (evt.type == SDL_EVENT_KEY_DOWN)
+    {
+        if (evt.key.key == SDLK_LEFT)
+        {
+            left.downs += 1;
+            left.pressed = true;
+            return true;
+        }
+        else if (evt.key.key == SDLK_RIGHT)
+        {
+            right.downs += 1;
+            right.pressed = true;
+            return true;
+        }
+        else if (evt.key.key == SDLK_UP || evt.key.key == SDLK_SPACE)
+        {
+            current_fruit = ((current_fruit + 1) % 4);
+            switch_fruit_display(current_fruit);
+            return true;
+        }
+        else if (evt.key.key == SDLK_DOWN)
+        {
+            current_fruit = ((current_fruit + 3) % 4);
 
-	if (evt.type == SDL_EVENT_KEY_DOWN) {
-		if (evt.key.key == SDLK_LEFT) {
-			left.downs += 1;
-			left.pressed = true;
-			return true;
-		} else if (evt.key.key == SDLK_RIGHT) {
-			right.downs += 1;
-			right.pressed = true;
-			return true;
-		} else if (evt.key.key == SDLK_UP) {
-			up.downs += 1;
-			up.pressed = true;
-			return true;
-		} else if (evt.key.key == SDLK_DOWN) {
-			down.downs += 1;
-			down.pressed = true;
-			return true;
-		}
-	} else if (evt.type == SDL_EVENT_KEY_UP) {
-		if (evt.key.key == SDLK_LEFT) {
-			left.pressed = false;
-			return true;
-		} else if (evt.key.key == SDLK_RIGHT) {
-			right.pressed = false;
-			return true;
-		} else if (evt.key.key == SDLK_UP) {
-			up.pressed = false;
-			return true;
-		} else if (evt.key.key == SDLK_DOWN) {
-			down.pressed = false;
-			return true;
-		}
-	}
+            switch_fruit_display(current_fruit);
+            return true;
+        }
+    }
+    else if (evt.type == SDL_EVENT_KEY_UP)
+    {
+        if (evt.key.key == SDLK_LEFT)
+        {
+            left.pressed = false;
+            return true;
+        }
+        else if (evt.key.key == SDLK_RIGHT)
+        {
+            right.pressed = false;
+            return true;
+        }
+    }
 
-	return false;
+    return false;
 }
 
-void PlayMode::update(float elapsed) {
+void PlayMode::update(float elapsed)
+{
+    timer -= elapsed;
+    if (timer < 0)
+        return; // game ends
 
-	//slowly rotates through [0,1):
-	// (will be used to set background color)
-	background_fade += elapsed / 10.0f;
-	background_fade -= std::floor(background_fade);
+    // handle inputs
+    constexpr float PlayerSpeed = 60.0f;
+    GameObject &player = scene.lookup("player");
+    GameObject &catcher = scene.lookup("catcher");
+    if (left.pressed)
+    {
+        // player.move(-PlayerSpeed * elapsed, 0);
+        player.move_clamped(-PlayerSpeed * elapsed, 0, 0, PPU466::ScreenWidth - 8, player.pos_y, player.pos_y);
+    }
+    if (right.pressed)
+    {
+        // player.move(PlayerSpeed * elapsed, 0);
+        player.move_clamped(PlayerSpeed * elapsed, 0, 0, PPU466::ScreenWidth - 8, player.pos_y, player.pos_y);
+    }
+    left.downs = 0;
+    right.downs = 0;
 
-	constexpr float PlayerSpeed = 30.0f;
-	if (left.pressed) player_at.x -= PlayerSpeed * elapsed;
-	if (right.pressed) player_at.x += PlayerSpeed * elapsed;
-	if (down.pressed) player_at.y -= PlayerSpeed * elapsed;
-	if (up.pressed) player_at.y += PlayerSpeed * elapsed;
+    // move catcher
+    constexpr float CatcherSpeed = 45.0f;
+    float bottom_fruit_x = get_first_fruit().pos_x;
+    float dx = bottom_fruit_x - catcher.pos_x;
+    if (dx > 0.5f || dx < -0.5f)
+    {
+        catcher.move_clamped((dx < 0 ? -CatcherSpeed : CatcherSpeed) * elapsed, 0, 8, PPU466::ScreenWidth - 16, catcher.pos_y, catcher.pos_y);
+    }
 
-	//reset button press counters:
-	left.downs = 0;
-	right.downs = 0;
-	up.downs = 0;
-	down.downs = 0;
+    // drop
+    drop_timer -= elapsed;
+    if (drop_timer < 0)
+    {
+        drop_timer = get_fruit_cooldown(current_fruit);
+        drop_fruit();
+    }
+
+    // fruits
+    std::vector<std::string> to_remove;
+    for (auto &[name, go] : scene.game_objects)
+    {
+        if (name.rfind("fruit", 0) == 0)
+        {
+            uint8_t fruit = go.extra;
+            if (fruit < 0)
+                continue;
+
+            go.velocity = {go.velocity.x, go.velocity.y - get_fruit_acceleration(go.extra) * elapsed};
+            go.move(go.velocity.x * elapsed, go.velocity.y * elapsed);
+            if (glm::distance(catcher.get_pos(), go.get_pos()) < 3)
+            {
+                // std::cout << "Catched!" << "\n";
+                to_remove.push_back(name);
+            }
+            else if (go.pos_y < 0)
+            {
+                // std::cout << "Get Point!" << "\n";
+                point += get_point_from_fruit(go.extra);
+                to_remove.push_back(name);
+            }
+        }
+    }
+    // remove dropped fruit
+    for (std::string fruit_name : to_remove)
+    {
+        scene.remove_game_object(fruit_name);
+    }
+
+    // modify point/timer number sprites
+    switch_point_display(point);
+    switch_time_display(timer);
 }
 
-void PlayMode::draw(glm::uvec2 const &drawable_size) {
-	//--- set ppu state based on game state ---
+const GameObject PlayMode::get_first_fruit() const
+{
+    GameObject ret = EMPTY;
+    uint16_t ly = PPU466::ScreenHeight;
 
-	//background color will be some hsv-like fade:
-	ppu.background_color = glm::u8vec4(
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 0.0f / 3.0f) ) ) ))),
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 1.0f / 3.0f) ) ) ))),
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 2.0f / 3.0f) ) ) ))),
-		0xff
-	);
+    for (const auto &[name, go] : scene.game_objects)
+    {
+        if (name.rfind("fruit", 0) == 0)
+        {
+            if (go.pos_y < ly)
+            {
+                ly = go.pos_y;
+                ret = go;
+            }
+        }
+    }
+    return ret;
+}
 
-	//tilemap gets recomputed every frame as some weird plasma thing:
-	//NOTE: don't do this in your game! actually make a map or something :-)
-	for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
-		for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-			//TODO: make weird plasma thing
-			ppu.background[x+PPU466::BackgroundWidth*y] = ((x+y)%16);
-		}
-	}
+float PlayMode::get_fruit_cooldown(int id) const
+{
+    switch (id)
+    {
+    case 0:
+        return 0.6f;
+    case 1:
+        return 2.0f;
+    case 2:
+        return 1.0f;
+    case 3:
+        return 1.0f;
+    default:
+        return 1.0f;
+    }
+}
 
-	//background scroll:
-	ppu.background_position.x = int32_t(-0.5f * player_at.x);
-	ppu.background_position.y = int32_t(-0.5f * player_at.y);
+u_int8_t PlayMode::get_point_from_fruit(int id) const
+{
+    switch (id)
+    {
+    case 0:
+        return 1;
+    case 1:
+        return 1;
+    case 2:
+        return 1;
+    case 3:
+        return 1;
+    default:
+        return 0;
+    }
+}
 
-	//player sprite:
-	ppu.sprites[0].x = int8_t(player_at.x);
-	ppu.sprites[0].y = int8_t(player_at.y);
-	ppu.sprites[0].index = 32;
-	ppu.sprites[0].attributes = 7;
+float PlayMode::get_fruit_acceleration(int id) const
+{
+    switch (id)
+    {
+    case 0:
+        return 16.0f;
+    case 1:
+        return 40.0f;
+    case 2:
+        return 0.0f;
+    case 3:
+        return 8.0f;
+    default:
+        return 0;
+    }
+}
 
-	//some other misc sprites:
-	for (uint32_t i = 1; i < 63; ++i) {
-		float amt = (i + 2.0f * background_fade) / 62.0f;
-		ppu.sprites[i].x = int8_t(0.5f * float(PPU466::ScreenWidth) + std::cos( 2.0f * M_PI * amt * 5.0f + 0.01f * player_at.x) * 0.4f * float(PPU466::ScreenWidth));
-		ppu.sprites[i].y = int8_t(0.5f * float(PPU466::ScreenHeight) + std::sin( 2.0f * M_PI * amt * 3.0f + 0.01f * player_at.y) * 0.4f * float(PPU466::ScreenWidth));
-		ppu.sprites[i].index = 32;
-		ppu.sprites[i].attributes = 6;
-		if (i % 2) ppu.sprites[i].attributes |= 0x80; //'behind' bit
-	}
+float PlayMode::get_fruit_speed(int id) const
+{
+    switch (id)
+    {
+    case 0:
+        return 100.0f;
+    case 1:
+        return 20.0f;
+    case 2:
+        return 160.0f;
+    case 3:
+        return 100.0f;
+    default:
+        return 0;
+    }
+}
 
-	//--- actually draw ---
-	ppu.draw(drawable_size);
+void PlayMode::drop_fruit()
+{
+    GameObject player = scene.lookup("player");
+    GameObject fruit = {player.pos_x, player.pos_y, {get_fruit_sprite(current_fruit)}};
+    fruit.extra = current_fruit;
+    fruit.velocity = {0, -get_fruit_speed(current_fruit)};
+    scene.add_game_object("fruit" + std::to_string(fruit_count++), fruit);
+}
+
+void PlayMode::draw(glm::uvec2 const &drawable_size)
+{
+    //--- set ppu state based on game state ---
+    ppu.sprites = scene.gather_game_object_sprites();
+
+    // background color will be some hsv-like fade:
+    ppu.background_color = glm::u8vec4(0, 0, 0, 0);
+
+    ppu.background = scene.background;
+
+    //--- actually draw ---
+    ppu.draw(drawable_size);
+}
+
+GameObject::SpriteInput PlayMode::get_fruit_sprite(int id)
+{
+    switch (id)
+    {
+    case 0:
+        return {4, fruit1_palette, 0, 0, false};
+    case 1:
+        return {5, fruit1_palette, 0, 0, false};
+    case 2:
+        return {6, fruit2_palette, 0, 0, false};
+    case 3:
+        return {7, fruit2_palette, 0, 0, false};
+    default:
+        return {4, fruit1_palette, 0, 0, false};
+    }
+}
+
+void PlayMode::switch_fruit_display(int id)
+{
+    float x = scene.lookup("player").pos_x;
+    float y = scene.lookup("player").pos_y;
+    scene.remove_game_object("player");
+    GameObject new_player = {x, y, {get_fruit_sprite(id), {11, characters_palette, 0, -8, false}}};
+    scene.add_game_object("player", new_player);
+}
+
+void PlayMode::switch_point_display(int point)
+{
+    scene.remove_game_object("score");
+    uint16_t last3 = point % 1000;
+    uint16_t p1 = last3 / 100;
+    uint16_t p2 = last3 / 10 % 10;
+    uint16_t p3 = last3 % 10;
+    // std::cout << point << " " << p1 << p2 << p3 << " (point) \n";
+    GameObject score{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{13, nums_palette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
+    scene.add_game_object("score", score);
+}
+
+void PlayMode::switch_time_display(float time)
+{
+    scene.remove_game_object("timer");
+    uint16_t last3 = ((uint16_t)time) % 1000;
+    uint16_t p1 = last3 / 100;
+    uint16_t p2 = last3 / 10 % 10;
+    uint16_t p3 = last3 % 10;
+    // std::cout << time << " " << p1 << p2 << p3 << " (time) \n";
+    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{12, nums_palette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
+    scene.add_game_object("timer", timer);
+}
+
+GameObject::SpriteInput PlayMode::get_number_sprite(int number, float x_offset, float y_offset)
+{
+    // zero
+    if (number <= 0 || number > 9)
+    {
+        return {14, nums_palette, x_offset, y_offset, false};
+    }
+    return {uint8_t(14 + number), nums_palette, x_offset, y_offset, false};
 }
