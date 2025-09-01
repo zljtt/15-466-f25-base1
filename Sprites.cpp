@@ -55,8 +55,6 @@ uint8_t Sprites::load(std::string const &filename)
     {
         throw std::runtime_error("PNG is not a multiple of 8 pixel.");
     }
-    // const uint8_t tile_count = (size.x / 8) * (size.y / 8);
-
     // read palette from data
     PPU466::Palette palette;
     palette[0] = glm::u8vec4(0, 0, 0, 0);

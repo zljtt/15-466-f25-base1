@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <deque>
+#include <cstdint>
 
 struct PlayMode : Mode
 {

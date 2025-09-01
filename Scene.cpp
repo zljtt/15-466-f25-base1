@@ -32,7 +32,7 @@ void GameObject::move(float x, float y)
     for (auto &[sprite, offset] : sprites)
     {
         // hide if out of screen;
-        if (pos_x + offset.x < 0 || pos_x + offset.x > PPU466::ScreenWidth || pos_y + offset.y < 0 || pos_y + offset.y > PPU466::ScreenHeight)
+        if (pos_x + offset.x < 0 || pos_x + offset.x > static_cast<float>(PPU466::ScreenWidth) || pos_y + offset.y < 0 || pos_y + offset.y > static_cast<float>(PPU466::ScreenHeight))
         {
             sprite.x = 0;
             sprite.y = 240;
@@ -61,7 +61,7 @@ void GameObject::move_clamped(float dx, float dy, float minx, float maxx, float 
     for (auto &[sprite, offset] : sprites)
     {
         // hide if out of screen;
-        if (pos_x + offset.x < 0 || pos_x + offset.x > PPU466::ScreenWidth || pos_y + offset.y < 0 || pos_y + offset.y > PPU466::ScreenHeight)
+        if (pos_x + offset.x < 0 || pos_x + offset.x > static_cast<float>(PPU466::ScreenWidth) || pos_y + offset.y < 0 || pos_y + offset.y > static_cast<float>(PPU466::ScreenHeight))
         {
             sprite.x = 0;
             sprite.y = 240;
@@ -110,7 +110,8 @@ std::array<PPU466::Sprite, 64> Scene::gather_game_object_sprites() const
             items.push_back(sprite.first);
         }
     };
-    for (int i = 0; i < ((items.size() > 64) ? 64 : items.size()); i++)
+    int size = static_cast<int>(items.size());
+    for (int i = 0; i < ((size > 64) ? 64 : size); i++)
     {
         out[i] = items[i];
     }
