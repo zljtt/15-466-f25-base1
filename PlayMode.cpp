@@ -44,12 +44,12 @@ PlayMode::PlayMode()
     scene.add_game_object("catcher", catcher);
 
     // current point
-    GameObject score{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{12, NumsPalette, 0, 0, false}}};
-    scene.add_game_object("score", score);
+    GameObject score_obj{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{12, NumsPalette, 0, 0, false}}};
+    scene.add_game_object("score", score_obj);
     // 14 -> 0, 15 -> 1, 16 -> 2, 17 -> 3, 18 -> 4, 19 -> 5, 20 -> 6, 21 -> 7, 22 -> 8, 23 -> 9
     // current time
-    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{13, NumsPalette, 0, 0, false}}};
-    scene.add_game_object("timer", timer);
+    GameObject timer_obj{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{13, NumsPalette, 0, 0, false}}};
+    scene.add_game_object("timer", timer_obj);
 }
 
 PlayMode::~PlayMode()
@@ -184,7 +184,7 @@ void PlayMode::update(float elapsed)
 const GameObject PlayMode::get_first_fruit() const
 {
     GameObject ret = EMPTY;
-    uint16_t ly = PPU466::ScreenHeight;
+    float ly = static_cast<float>(PPU466::ScreenHeight);
 
     for (const auto &[name, go] : scene.game_objects)
     {
