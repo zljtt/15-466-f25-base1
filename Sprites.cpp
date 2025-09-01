@@ -109,6 +109,7 @@ uint8_t Sprites::load(std::string const &filename)
                             color_id = i;
                     }
                     // assign 2bit
+                    // bit merging algorism queried from ChatGPT
                     switch (color_id)
                     {
                     default:
@@ -143,6 +144,7 @@ uint8_t Sprites::load(std::string const &filename)
 void Sprites::load_binary(std::string path)
 {
     std::ifstream in(path, std::ios::binary);
+    // based on https://stackoverflow.com/questions/58434836/read-int-through-char-binary-data-from-a-file-with-stdifstreamread
     in.read(reinterpret_cast<char *>(palette_table.data()), sizeof(palette_table));
     in.read(reinterpret_cast<char *>(tile_table.data()), sizeof(tile_table));
     in.read(reinterpret_cast<char *>(background.data()), sizeof(background));
@@ -151,6 +153,7 @@ void Sprites::load_binary(std::string path)
 void Sprites::save_assets(std::string path)
 {
     std::ofstream out(path, std::ios::binary);
+    // based on https://stackoverflow.com/questions/58434836/read-int-through-char-binary-data-from-a-file-with-stdifstreamread
     out.write(reinterpret_cast<const char *>(palette_table.data()), sizeof(palette_table));
     out.write(reinterpret_cast<const char *>(tile_table.data()), sizeof(tile_table));
     out.write(reinterpret_cast<const char *>(background.data()), sizeof(background));
