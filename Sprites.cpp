@@ -38,7 +38,7 @@ void Sprites::gen_background()
     }
 }
 
-void Sprites::set_background(u_int16_t x, u_int16_t y, u_int8_t tile_id, u_int8_t palette_id)
+void Sprites::set_background(uint16_t x, uint16_t y, uint8_t tile_id, uint8_t palette_id)
 {
     background[x + PPU466::BackgroundWidth * y] = (palette_id << 8) | tile_id;
 }

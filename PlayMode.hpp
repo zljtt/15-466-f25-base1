@@ -23,15 +23,15 @@ struct PlayMode : Mode
 
     //----- game state -----
     Scene scene;
-    enum Fruit : u_int8_t
+    enum Fruit : uint8_t
     {
         CHERRY = 0,     // normal speed, normal acc, low cooldown
         WATERMELON = 1, // low speed, high acc, high cooldown
         ORANGE = 2,     // high speed, no acc, normal cooldown
         BANANA = 3      // normal speed, low acc, normal cooldown
     };
-    u_int8_t current_fruit = CHERRY;
-    u_int64_t fruit_count = 0;
+    uint8_t current_fruit = CHERRY;
+    uint64_t fruit_count = 0;
     float drop_timer;
     static const int COUNTDOWN = 60;
     float timer;
@@ -50,7 +50,7 @@ struct PlayMode : Mode
     float get_fruit_acceleration(int id) const;
     float get_fruit_speed(int id) const;
     float get_fruit_cooldown(int id) const;
-    u_int8_t get_point_from_fruit(int id) const;
+    uint8_t get_point_from_fruit(int id) const;
 
     // input tracking:
     struct Button

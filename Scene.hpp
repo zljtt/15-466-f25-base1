@@ -17,7 +17,7 @@ struct GameObject
     float pos_x;
     float pos_y;
     glm::vec2 velocity = {0, 0};
-    u_int8_t extra = -1;
+    uint8_t extra = -1;
 
     struct SpriteInput
     {

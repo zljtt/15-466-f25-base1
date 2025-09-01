@@ -19,7 +19,7 @@ struct Sprites
     Sprites();
     uint8_t load(std::string const &filename);
     void gen_background();
-    void set_background(u_int16_t x, u_int16_t y, u_int8_t tile_id, u_int8_t palette_id);
+    void set_background(uint16_t x, uint16_t y, uint8_t tile_id, uint8_t palette_id);
 
     void load_binary(std::string path);
     void save_assets(std::string path);

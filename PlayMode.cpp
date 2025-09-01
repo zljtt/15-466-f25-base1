@@ -217,7 +217,7 @@ float PlayMode::get_fruit_cooldown(int id) const
     }
 }
 
-u_int8_t PlayMode::get_point_from_fruit(int id) const
+uint8_t PlayMode::get_point_from_fruit(int id) const
 {
     switch (id)
     {
