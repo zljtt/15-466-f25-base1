@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include <ctime>
 
-static const uint8_t BackgroundPalette = 0; // 0
 static const uint8_t Fruit1Palette = 1;     // 1
 static const uint8_t Fruit2Palette = 2;     // 2
 static const uint8_t CharactersPalette = 3; // 3
@@ -25,8 +24,8 @@ Load<Sprites> sprites(LoadTagEarly, []() -> Sprites const *
     // ret.load(data_path("fruits2.png")); // tile 6 - 7
     // ret.load(data_path("characters.png")); // tile 8 - 11
     // ret.load(data_path("nums.png")); // tile 12 - 23
-    ret.load_binary(data_path("game.assets"));
-    // ret.save_assets(data_path("game.assets"));
+    ret.load_binary(data_path("game.asset"));
+    // ret.save_assets(data_path("game.asset"));
     return &ret; });
 
 PlayMode::PlayMode()
@@ -34,7 +33,9 @@ PlayMode::PlayMode()
     timer = COUNTDOWN;
     ppu.palette_table = sprites->palette_table;
     ppu.tile_table = sprites->tile_table;
+    ppu.background = sprites->background;
 
+    // preparing the scene
     // player
     GameObject player{PPU466::ScreenWidth / 2 - 4, PPU466::ScreenHeight - 8, {{4, Fruit1Palette, 0, 0, false}, {11, CharactersPalette, 0, -8, false}}};
     scene.add_game_object("player", player);
@@ -49,17 +50,6 @@ PlayMode::PlayMode()
     // current time
     GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{13, NumsPalette, 0, 0, false}}};
     scene.add_game_object("timer", timer);
-
-    srand(time(nullptr));
-    for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y)
-    {
-        for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x)
-        {
-            scene.set_background(x, y, rand() % 4, BackgroundPalette);
-        }
-    }
-    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, NumsPalette);
-    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, NumsPalette);
 }
 
 PlayMode::~PlayMode()
@@ -217,7 +207,7 @@ float PlayMode::get_fruit_cooldown(int id) const
     case 0:
         return 0.6f;
     case 1:
-        return 2.0f;
+        return 1.8f;
     case 2:
         return 1.0f;
     case 3:
@@ -234,7 +224,7 @@ u_int8_t PlayMode::get_point_from_fruit(int id) const
     case 0:
         return 1;
     case 1:
-        return 1;
+        return 2;
     case 2:
         return 1;
     case 3:
@@ -255,7 +245,7 @@ float PlayMode::get_fruit_acceleration(int id) const
     case 2:
         return 0.0f;
     case 3:
-        return 8.0f;
+        return 10.0f;
     default:
         return 0;
     }
@@ -266,13 +256,13 @@ float PlayMode::get_fruit_speed(int id) const
     switch (id)
     {
     case 0:
-        return 100.0f;
+        return 90.0f;
     case 1:
         return 20.0f;
     case 2:
-        return 160.0f;
+        return 170.0f;
     case 3:
-        return 100.0f;
+        return 120.0f;
     default:
         return 0;
     }
@@ -294,8 +284,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size)
 
     // background color will be some hsv-like fade:
     ppu.background_color = glm::u8vec4(0, 0, 0, 0);
-
-    ppu.background = scene.background;
 
     //--- actually draw ---
     ppu.draw(drawable_size);

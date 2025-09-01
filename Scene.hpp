@@ -38,9 +38,7 @@ static const GameObject EMPTY = {0, 0, {}};
 struct Scene
 {
     std::unordered_map<std::string, GameObject> game_objects;
-    std::array<uint16_t, PPU466::BackgroundWidth * PPU466::BackgroundHeight> background;
 
-    void set_background(u_int16_t x, u_int16_t y, u_int8_t tile_id, u_int8_t palette_id);
     void add_game_object(std::string const &name, GameObject &game_object);
     void remove_game_object(std::string const &name);
     GameObject &lookup(std::string const &name);

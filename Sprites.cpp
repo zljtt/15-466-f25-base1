@@ -5,6 +5,8 @@
 #include "load_save_png.hpp"
 #include <iostream>
 
+static const uint8_t BackgroundPalette = 0; // 0
+
 Sprites::Sprites()
 {
     for (PPU466::Tile &tile : tile_table)
@@ -19,6 +21,24 @@ Sprites::Sprites()
             palette[i] = {0, 0, 0, 0};
         }
     }
+}
+
+void Sprites::gen_background()
+{
+    // preparing background
+    srand(time(nullptr));
+    for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y)
+    {
+        for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x)
+        {
+            set_background(x, y, rand() % 4, BackgroundPalette);
+        }
+    }
+}
+
+void Sprites::set_background(u_int16_t x, u_int16_t y, u_int8_t tile_id, u_int8_t palette_id)
+{
+    background[x + PPU466::BackgroundWidth * y] = (palette_id << 8) | tile_id;
 }
 
 uint8_t Sprites::load(std::string const &filename)
@@ -116,23 +136,14 @@ uint8_t Sprites::load(std::string const &filename)
     }
     palette_table[pi++] = palette;
     return pi - 1;
-    // Sprites sprites;
-    // std::ifstream file(filename, std::ios::binary);
-    // file.read(reinterpret_cast<char *>(sprites.tile_table.data()), sizeof(sprites.tile_table));
-
-    // return sprites;
-    // std::vector<u_int32_t> rgb_data;
-    // GLuint tex = 0;
-    // glGenTextures(1, &tex);
-    // glBindTexture(GL_TEXTURE_2D, tex);
-    // glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 128, 128, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
-    // glBindTexture(GL_TEXTURE_2D, 0);
 }
+
 void Sprites::load_binary(std::string path)
 {
     std::ifstream in(path, std::ios::binary);
     in.read(reinterpret_cast<char *>(palette_table.data()), sizeof(palette_table));
     in.read(reinterpret_cast<char *>(tile_table.data()), sizeof(tile_table));
+    in.read(reinterpret_cast<char *>(background.data()), sizeof(background));
 }
 
 void Sprites::save_assets(std::string path)
@@ -140,4 +151,5 @@ void Sprites::save_assets(std::string path)
     std::ofstream out(path, std::ios::binary);
     out.write(reinterpret_cast<const char *>(palette_table.data()), sizeof(palette_table));
     out.write(reinterpret_cast<const char *>(tile_table.data()), sizeof(tile_table));
+    out.write(reinterpret_cast<const char *>(background.data()), sizeof(background));
 }

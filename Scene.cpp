@@ -94,11 +94,6 @@ void Scene::remove_game_object(std::string const &name)
     game_objects.erase(name);
 }
 
-void Scene::set_background(u_int16_t x, u_int16_t y, u_int8_t tile_id, u_int8_t palette_id)
-{
-    background[x + PPU466::BackgroundWidth * y] = (palette_id << 8) | tile_id;
-}
-
 std::array<PPU466::Sprite, 64> Scene::gather_game_object_sprites() const
 {
     std::array<PPU466::Sprite, 64> out{};
