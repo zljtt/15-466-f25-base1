@@ -5,30 +5,20 @@
 #include "load_save_png.hpp"
 #include <iostream>
 
-std::array<PPU466::Tile, 256> Sprites::to_ppu466_tile_table() const
+Sprites::Sprites()
 {
-    std::array<PPU466::Tile, 256> ret{};
-    for (PPU466::Tile &tile : ret)
+    for (PPU466::Tile &tile : tile_table)
     {
         tile.bit0.fill(0);
         tile.bit1.fill(0);
     }
-    std::copy_n(tile_table.begin(), std::min(tile_table.size(), ret.size()), ret.begin());
-    return ret;
-}
-
-std::array<PPU466::Palette, 8> Sprites::to_ppu466_palette_table() const
-{
-    std::array<PPU466::Palette, 8> ret{};
-    for (PPU466::Palette &palette : ret)
+    for (PPU466::Palette &palette : palette_table)
     {
         for (int i = 0; i < 4; i++)
         {
             palette[i] = {0, 0, 0, 0};
         }
     }
-    std::copy_n(palette_table.begin(), std::min(palette_table.size(), ret.size()), ret.begin());
-    return ret;
 }
 
 uint8_t Sprites::load(std::string const &filename)
@@ -73,6 +63,7 @@ uint8_t Sprites::load(std::string const &filename)
 
     // create tiles from data and palette
     // loop through tiles in the png
+
     for (uint8_t ty = 0; ty < (size.y / SPRITE_SIZE); ty++)
     {
         for (uint8_t tx = 0; tx < (size.x / SPRITE_SIZE); tx++)
@@ -120,11 +111,11 @@ uint8_t Sprites::load(std::string const &filename)
                 tile.bit0[y] = bit0y;
                 tile.bit1[y] = bit1y;
             }
-            tile_table.push_back(tile);
+            tile_table[ti++] = tile;
         }
     }
-    palette_table.push_back(palette);
-    return palette_table.size() - 1;
+    palette_table[pi++] = palette;
+    return pi - 1;
     // Sprites sprites;
     // std::ifstream file(filename, std::ios::binary);
     // file.read(reinterpret_cast<char *>(sprites.tile_table.data()), sizeof(sprites.tile_table));
@@ -136,4 +127,17 @@ uint8_t Sprites::load(std::string const &filename)
     // glBindTexture(GL_TEXTURE_2D, tex);
     // glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 128, 128, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
     // glBindTexture(GL_TEXTURE_2D, 0);
+}
+void Sprites::load_binary(std::string path)
+{
+    std::ifstream in(path, std::ios::binary);
+    in.read(reinterpret_cast<char *>(palette_table.data()), sizeof(palette_table));
+    in.read(reinterpret_cast<char *>(tile_table.data()), sizeof(tile_table));
+}
+
+void Sprites::save_assets(std::string path)
+{
+    std::ofstream out(path, std::ios::binary);
+    out.write(reinterpret_cast<const char *>(palette_table.data()), sizeof(palette_table));
+    out.write(reinterpret_cast<const char *>(tile_table.data()), sizeof(tile_table));
 }

@@ -9,11 +9,13 @@
 
 struct Sprites
 {
-    std::vector<PPU466::Palette> palette_table;
+    uint32_t ti = 0;
+    uint32_t pi = 0;
+    std::array<PPU466::Palette, 8> palette_table;
+    std::array<PPU466::Tile, 256> tile_table;
 
-    std::vector<PPU466::Tile> tile_table;
-    std::array<PPU466::Tile, 256> to_ppu466_tile_table() const;
-    std::array<PPU466::Palette, 8> to_ppu466_palette_table() const;
-
+    Sprites();
     uint8_t load(std::string const &filename);
+    void load_binary(std::string path);
+    void save_assets(std::string path);
 };

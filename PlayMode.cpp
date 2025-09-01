@@ -11,41 +11,43 @@
 #include <cstdlib>
 #include <ctime>
 
-uint8_t background_palette; // 0
-uint8_t fruit1_palette;     // 1
-uint8_t fruit2_palette;     // 2
-uint8_t characters_palette; // 3
-uint8_t nums_palette;       // 4
+static const uint8_t BackgroundPalette = 0; // 0
+static const uint8_t Fruit1Palette = 1;     // 1
+static const uint8_t Fruit2Palette = 2;     // 2
+static const uint8_t CharactersPalette = 3; // 3
+static const uint8_t NumsPalette = 4;       // 4
 
 Load<Sprites> sprites(LoadTagEarly, []() -> Sprites const *
                       {
     static Sprites ret {};
-    background_palette = ret.load(data_path("background.png")); // tile 0 - 3
-    fruit1_palette = ret.load(data_path("fruits1.png")); // tile 4 - 5
-    fruit2_palette = ret.load(data_path("fruits2.png")); // tile 6 - 7
-    characters_palette = ret.load(data_path("characters.png")); // tile 8 - 11
-    nums_palette = ret.load(data_path("nums.png")); // tile 12 - 23
+    // ret.load(data_path("background.png")); // tile 0 - 3
+    // ret.load(data_path("fruits1.png")); // tile 4 - 5
+    // ret.load(data_path("fruits2.png")); // tile 6 - 7
+    // ret.load(data_path("characters.png")); // tile 8 - 11
+    // ret.load(data_path("nums.png")); // tile 12 - 23
+    ret.load_binary(data_path("game.asset"));
+    // ret.save_assets(data_path("game.asset"));
     return &ret; });
 
 PlayMode::PlayMode()
 {
     timer = COUNTDOWN;
-    ppu.palette_table = sprites->to_ppu466_palette_table();
-    ppu.tile_table = sprites->to_ppu466_tile_table();
+    ppu.palette_table = sprites->palette_table;
+    ppu.tile_table = sprites->tile_table;
 
     // player
-    GameObject player{PPU466::ScreenWidth / 2 - 4, PPU466::ScreenHeight - 8, {{4, fruit1_palette, 0, 0, false}, {11, characters_palette, 0, -8, false}}};
+    GameObject player{PPU466::ScreenWidth / 2 - 4, PPU466::ScreenHeight - 8, {{4, Fruit1Palette, 0, 0, false}, {11, CharactersPalette, 0, -8, false}}};
     scene.add_game_object("player", player);
     // catcher
-    GameObject catcher{PPU466::ScreenWidth / 2 - 4, 0, {{8, characters_palette, -8, 0, false}, {9, characters_palette, 0, 0, false}, {10, characters_palette, 8, 0, false}}};
+    GameObject catcher{PPU466::ScreenWidth / 2 - 4, 0, {{8, CharactersPalette, -8, 0, false}, {9, CharactersPalette, 0, 0, false}, {10, CharactersPalette, 8, 0, false}}};
     scene.add_game_object("catcher", catcher);
 
     // current point
-    GameObject score{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{12, nums_palette, 0, 0, false}}};
+    GameObject score{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{12, NumsPalette, 0, 0, false}}};
     scene.add_game_object("score", score);
     // 14 -> 0, 15 -> 1, 16 -> 2, 17 -> 3, 18 -> 4, 19 -> 5, 20 -> 6, 21 -> 7, 22 -> 8, 23 -> 9
     // current time
-    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{13, nums_palette, 0, 0, false}}};
+    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{13, NumsPalette, 0, 0, false}}};
     scene.add_game_object("timer", timer);
 
     srand(time(nullptr));
@@ -53,11 +55,11 @@ PlayMode::PlayMode()
     {
         for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x)
         {
-            scene.set_background(x, y, rand() % 4, background_palette);
+            scene.set_background(x, y, rand() % 4, BackgroundPalette);
         }
     }
-    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, nums_palette);
-    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, nums_palette);
+    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, NumsPalette);
+    scene.set_background(PPU466::BackgroundWidth - 4, PPU466::BackgroundHeight - 1, 22, NumsPalette);
 }
 
 PlayMode::~PlayMode()
@@ -304,15 +306,15 @@ GameObject::SpriteInput PlayMode::get_fruit_sprite(int id)
     switch (id)
     {
     case 0:
-        return {4, fruit1_palette, 0, 0, false};
+        return {4, Fruit1Palette, 0, 0, false};
     case 1:
-        return {5, fruit1_palette, 0, 0, false};
+        return {5, Fruit1Palette, 0, 0, false};
     case 2:
-        return {6, fruit2_palette, 0, 0, false};
+        return {6, Fruit2Palette, 0, 0, false};
     case 3:
-        return {7, fruit2_palette, 0, 0, false};
+        return {7, Fruit2Palette, 0, 0, false};
     default:
-        return {4, fruit1_palette, 0, 0, false};
+        return {4, Fruit1Palette, 0, 0, false};
     }
 }
 
@@ -321,7 +323,7 @@ void PlayMode::switch_fruit_display(int id)
     float x = scene.lookup("player").pos_x;
     float y = scene.lookup("player").pos_y;
     scene.remove_game_object("player");
-    GameObject new_player = {x, y, {get_fruit_sprite(id), {11, characters_palette, 0, -8, false}}};
+    GameObject new_player = {x, y, {get_fruit_sprite(id), {11, CharactersPalette, 0, -8, false}}};
     scene.add_game_object("player", new_player);
 }
 
@@ -333,7 +335,7 @@ void PlayMode::switch_point_display(int point)
     uint16_t p2 = last3 / 10 % 10;
     uint16_t p3 = last3 % 10;
     // std::cout << point << " " << p1 << p2 << p3 << " (point) \n";
-    GameObject score{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{13, nums_palette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
+    GameObject score{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 8, {{13, NumsPalette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
     scene.add_game_object("score", score);
 }
 
@@ -345,7 +347,7 @@ void PlayMode::switch_time_display(float time)
     uint16_t p2 = last3 / 10 % 10;
     uint16_t p3 = last3 % 10;
     // std::cout << time << " " << p1 << p2 << p3 << " (time) \n";
-    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{12, nums_palette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
+    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{12, NumsPalette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
     scene.add_game_object("timer", timer);
 }
 
@@ -354,7 +356,7 @@ GameObject::SpriteInput PlayMode::get_number_sprite(int number, float x_offset, 
     // zero
     if (number <= 0 || number > 9)
     {
-        return {14, nums_palette, x_offset, y_offset, false};
+        return {14, NumsPalette, x_offset, y_offset, false};
     }
-    return {uint8_t(14 + number), nums_palette, x_offset, y_offset, false};
+    return {uint8_t(14 + number), NumsPalette, x_offset, y_offset, false};
 }
