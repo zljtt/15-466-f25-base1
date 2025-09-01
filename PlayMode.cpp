@@ -209,7 +209,7 @@ float PlayMode::get_fruit_cooldown(int id) const
     case 1:
         return 1.8f;
     case 2:
-        return 1.0f;
+        return 1.2f;
     case 3:
         return 1.0f;
     default:

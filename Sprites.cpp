@@ -4,6 +4,8 @@
 #include <vector>
 #include "load_save_png.hpp"
 #include <iostream>
+#include <cstdlib>
+#include <ctime>
 
 static const uint8_t BackgroundPalette = 0; // 0
 
