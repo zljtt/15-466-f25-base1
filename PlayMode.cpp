@@ -151,8 +151,7 @@ void PlayMode::update(float elapsed)
     {
         if (name.rfind("fruit", 0) == 0)
         {
-            uint8_t fruit = go.extra;
-            if (fruit < 0)
+            if (go.extra < 0)
                 continue;
 
             go.velocity = {go.velocity.x, go.velocity.y - get_fruit_acceleration(go.extra) * elapsed};
@@ -315,10 +314,10 @@ void PlayMode::switch_fruit_display(int id)
     scene.add_game_object("player", new_player);
 }
 
-void PlayMode::switch_point_display(int point)
+void PlayMode::switch_point_display(int p)
 {
     scene.remove_game_object("score");
-    uint16_t last3 = point % 1000;
+    uint16_t last3 = p % 1000;
     uint16_t p1 = last3 / 100;
     uint16_t p2 = last3 / 10 % 10;
     uint16_t p3 = last3 % 10;
@@ -335,8 +334,8 @@ void PlayMode::switch_time_display(float time)
     uint16_t p2 = last3 / 10 % 10;
     uint16_t p3 = last3 % 10;
     // std::cout << time << " " << p1 << p2 << p3 << " (time) \n";
-    GameObject timer{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{12, NumsPalette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
-    scene.add_game_object("timer", timer);
+    GameObject timer_obj{PPU466::ScreenWidth - 8 * 4, PPU466::ScreenHeight - 16, {{12, NumsPalette, 0, 0, false}, get_number_sprite(p1, 8, 0), get_number_sprite(p2, 8 * 2, 0), get_number_sprite(p3, 8 * 3, 0)}};
+    scene.add_game_object("timer", timer_obj);
 }
 
 GameObject::SpriteInput PlayMode::get_number_sprite(int number, float x_offset, float y_offset)
