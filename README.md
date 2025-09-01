@@ -13,8 +13,8 @@ How Your Asset Pipeline Works:
 - Asset preparation: 
     - run `node MaekfileAssetPrep.js` to create [`/dist/asset_preparation`](/dist/asset_preparation) executable. The run the exe to preload all PNGs in `/dist` folder and save assets to [`dist/game.asset`](dist/game.asset).
     - Tiles and palette are read from PNG files, where each PNG consisting at most 4 colors and the width/height pixel multipliable by 8. The PNG parsing tool functions will first scan the PNG and create a palette, and use the palette to store tiles into the tile table in [`Sprites.hpp`](Sprites.hpp).
-    - The background is simply a random spreading of four different grass tiles. It is generated during the after loading the PNGs and is also saved into `game.asset`.
-- Upon executing the game, `game.asset` will be loaded first, then the tile table and palette table will be uploaded to PPU466 during PlayMode init.
+    - The background is simply a random distribution of four different grass tiles. It is generated after loading the PNGs and is also saved into `game.asset`.
+- Upon executing the game, `game.asset` will load first, then the loaded tile table, palette table and the background (since it does not change in this game) will be uploaded to PPU466 during PlayMode init.
 - The scene consists of a controllable player, a moving catcher, dropping fruits, and some number texts(made from sprites). Considering the small amount of game objects in the game, the scene is not loaded from asset file but built in runtime using the loaded tiles and palettes during PlayMode init in [`PlayMode.cpp`](PlayMode.cpp).
     - Some game objects (fruits) are added/removed during the gameplay.
     - Some game objects need to change sprites constantly (the fruit indicator, the timer and the score display).
