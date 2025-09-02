@@ -17,7 +17,7 @@ struct Sprites
     std::array<uint16_t, PPU466::BackgroundWidth * PPU466::BackgroundHeight> background;
 
     Sprites();
-    uint8_t load(std::string const &filename);
+    void load(std::string const &filename);
     void gen_background();
     void set_background(uint16_t x, uint16_t y, uint8_t tile_id, uint8_t palette_id);
 

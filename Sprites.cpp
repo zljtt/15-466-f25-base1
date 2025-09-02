@@ -28,10 +28,10 @@ Sprites::Sprites()
 void Sprites::gen_background()
 {
     // preparing background
-    srand(time(nullptr));
-    for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y)
+    srand(static_cast<unsigned int>(time(nullptr)));
+    for (uint16_t y = 0; y < PPU466::BackgroundHeight; ++y)
     {
-        for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x)
+        for (uint16_t x = 0; x < PPU466::BackgroundWidth; ++x)
         {
             set_background(x, y, rand() % 4, BackgroundPalette);
         }
@@ -43,7 +43,7 @@ void Sprites::set_background(uint16_t x, uint16_t y, uint8_t tile_id, uint8_t pa
     background[x + PPU466::BackgroundWidth * y] = (palette_id << 8) | tile_id;
 }
 
-uint8_t Sprites::load(std::string const &filename)
+void Sprites::load(std::string const &filename)
 {
     const uint8_t SPRITE_SIZE = 8;
     // load from png
@@ -136,7 +136,6 @@ uint8_t Sprites::load(std::string const &filename)
         }
     }
     palette_table[pi++] = palette;
-    return pi - 1;
 }
 
 void Sprites::load_binary(std::string path)
